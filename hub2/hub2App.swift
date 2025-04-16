@@ -53,7 +53,7 @@ struct hub2App: App {
     }
     
     init() {
-        readFromFile()
+       // readFromFile()
     }
     let persistenceController = PersistenceController.shared
 

@@ -12,10 +12,11 @@ import Foundation
 
 
 var processLaunched = false
+var ran = 0;
 func makeOneBar(assignmentData: AssignmentStruct) -> some View{
     @State var showingPopover: Bool = false
 
-    var body = Button(action: {
+    let body = Button(action: {
         showingPopover = true
         print("clicked")
     }) {
@@ -49,8 +50,12 @@ func makeOneBar(assignmentData: AssignmentStruct) -> some View{
 
 func runCurl() -> [AssignmentStruct]{
     print("running!")
-    print(processLaunched)
-    
+    guard !processLaunched else {
+        print("hold on")
+        return []
+    }
+    processLaunched = true
+    ran+=1
     
     //open file, read from it
     //execute what's read and format the output into json
@@ -64,29 +69,42 @@ func runCurl() -> [AssignmentStruct]{
     }
     //print(fileContents)
     //making pipe to execute read command
+    
     let process = Process()
     let outputPipe = Pipe()
+    let errPipe = Pipe()
     var firstData: Data = Data()
        process.standardOutput = outputPipe
-       process.standardError = outputPipe
+       process.standardError = errPipe
+    //print(fileContents)
        process.arguments = ["-c", fileContents]
-       process.launchPath = "/bin/bash"
+    //process.arguments = ["-c", "echo 'hello from curl process'"]
+
+    process.executableURL = URL(fileURLWithPath: "/bin/bash")
        process.standardInput = Pipe()
-    
+
     
             
     do {
         print("starting")
         
-       
+
             try process.run()
-        print("waiting for end")
-            process.waitUntilExit()
-
+      
+        print(process.isRunning)
+    
+        firstData =  outputPipe.fileHandleForReading.readDataToEndOfFile()
+        var errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        processLaunched = false
+        print(errData)
+        print(firstData);
+        print("meow")
        
-        //firstData = data: outputPipe.fileHandleForReading.readDataToEndOfFile()//, encoding: .utf8
+            
+            
         // Prevents curl from waiting for input
-
+        
         //firstData = outputPipe.fileHandleForReading.readDataToEndOfFile()
         
     print("data output!")
@@ -98,11 +116,12 @@ func runCurl() -> [AssignmentStruct]{
     //decode it using json decoder, change the value of assignments,
     //then write it into a file
     let decoder = JSONDecoder()
+    
     var secondData: [AssignmentStruct]
 
      do {
           secondData = try decoder.decode([AssignmentStruct].self, from: firstData)
-         //print(String(data:firstData, encoding: .utf8))
+         print(String(data:firstData, encoding: .utf8))
          
      } catch {
          print("JSON Decoding Error: \(error)")
@@ -232,7 +251,7 @@ struct ContentView: View {
         sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
         animation: .default)
     private var items: FetchedResults<Item>
-    
+     
     var body: some View {
         
         TabView{
